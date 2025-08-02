@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import ProjectCard from "./ProjectCard";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-
-// Normalized type used inside the app
 export type Project = {
   id: number;
   name: string;
@@ -17,14 +15,23 @@ export type Project = {
   liveDemo: string;
 };
 
+type SupabaseProject = {
+  id: number;
+  title: string;
+  description: string;
+  images: string[];
+  tech: string[];
+  github: string;
+  live: string;
+};
+
 export default function Projects() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const pauseRef = useRef(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
-
-  const autoScroll = () => {
+  const autoScroll = useCallback(() => {
     const container = scrollRef.current;
     if (!container || pauseRef.current) return;
 
@@ -35,8 +42,7 @@ export default function Projects() {
     }
 
     animationRef.current = requestAnimationFrame(autoScroll);
-  };
-
+  }, []);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -44,18 +50,17 @@ export default function Projects() {
 
       if (error) {
         console.error("Error fetching projects:", error.message);
-      } else {
-        const normalized = data.map((item) => ({
+      } else if (data) {
+        const normalized: Project[] = data.map((item: SupabaseProject) => ({
           id: item.id,
-          name: item.title, // rename
-          desc: item.description, // rename
-          images: item.images,
-          techStack: item.tech, // rename
+          name: item.title,
+          desc: item.description,
+          images: item.images || [],
+          techStack: item.tech || [],
           github: item.github,
-          liveDemo: item.live, // rename
+          liveDemo: item.live,
         }));
 
-        console.log("Fetched Projects:", normalized);
         setProjects(normalized);
       }
     };
@@ -66,8 +71,11 @@ export default function Projects() {
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, []);
+  }, [autoScroll]);
 
+  useEffect(() => {
+    autoScroll();
+  }, [autoScroll]);
 
   const handleScroll = (direction: "left" | "right") => {
     const container = scrollRef.current;
@@ -96,6 +104,7 @@ export default function Projects() {
         <span className="inline-block text-[var(--primary)] animate-pulse delay-200">Elevate</span>
       </h2>
 
+      {/* Scroll buttons */}
       <button
         onClick={() => handleScroll("left")}
         className="absolute left-3 sm:left-4 top-[90%] transform -translate-y-1/2 bg-[var(--background)] p-2 sm:p-3 cursor-pointer rounded-full shadow-md z-10 hover:scale-110 transition"
@@ -110,6 +119,7 @@ export default function Projects() {
         <ChevronRight className="text-[var(--text)] w-5 h-5 sm:w-6 sm:h-6" />
       </button>
 
+      {/* Project Cards Container */}
       <div
         ref={scrollRef}
         className="flex gap-1 sm:gap-6 overflow-x-auto no-scrollbar w-full py-2 scroll-smooth scroll-pl-4 snap-x snap-mandatory"
@@ -124,13 +134,12 @@ export default function Projects() {
                 id: project.id,
                 title: project.name,
                 description: project.desc,
-                images: project.images || "",
+                images: project.images,
                 tech: project.techStack,
                 github: project.github,
                 live: project.liveDemo,
               }}
             />
-
           </div>
         ))}
       </div>
